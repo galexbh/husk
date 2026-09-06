@@ -1,4 +1,6 @@
-# husk
+<p align="center">
+  <img src="site/src/assets/husk-wordmark.svg" alt="husk" width="280" />
+</p>
 
 **Documentación completa: [galexbh.github.io/husk](https://galexbh.github.io/husk/)**
 
