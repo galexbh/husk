@@ -4,14 +4,13 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/http"
+	"log/slog"
 	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/galexbh/husk/internal/huskerr"
 	"github.com/galexbh/husk/internal/k8sclient"
-	"github.com/galexbh/husk/internal/promclient"
 )
 
 func newConnectCommand() *cobra.Command {
@@ -83,58 +82,38 @@ func runConnectHealth(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-// reportThanosHealth realiza un chequeo mínimo (best-effort) contra la route
-// de Thanos Querier. Este es un probe simple; el cliente completo de
-// Prometheus (descubrimiento, manejo de TLS, queries tipadas) se construye
-// en la Fase 2 (internal/promclient).
-func reportThanosHealth(ctx context.Context, out io.Writer, client *k8sclient.Client, logger promclient.Logger) {
+// reportThanosHealth valida Thanos Querier ejecutando una consulta PromQL
+// mínima a través de newOptionalPromClient — el mismo constructor que usan
+// sizing/capacity/score. Antes golpeaba /-/healthy directamente: esa ruta
+// puede no estar expuesta por la route/oauth-proxy de Thanos Querier en
+// OpenShift aunque /api/v1/query funcione con normalidad, lo que producía
+// un falso negativo aquí mientras el resto de la CLI sí obtenía datos.
+func reportThanosHealth(ctx context.Context, out io.Writer, client *k8sclient.Client, logger *slog.Logger) {
 	if !client.IsOpenShift {
 		fmt.Fprintln(out, "[N/A]    Thanos Querier: no aplica (cluster no es OpenShift)")
 		return
 	}
 
-	url, err := client.ThanosQuerierURL(ctx)
-	if err != nil {
-		fmt.Fprintf(out, "[FALTA]  Thanos Querier: %v\n", err)
+	url, urlErr := client.ThanosQuerierURL(ctx)
+
+	promCli, reason := newOptionalPromClient(ctx, client, logger)
+	if promCli == nil {
+		fmt.Fprintf(out, "[FALTA]  Thanos Querier: %s\n", reason)
 		return
 	}
 
-	token, err := client.BearerToken()
-	if err != nil {
-		fmt.Fprintf(out, "[FALTA]  Thanos Querier: %v\n", err)
+	if _, err := promCli.Query(ctx, "vector(1)"); err != nil {
+		if urlErr == nil {
+			fmt.Fprintf(out, "[FALTA]  Thanos Querier no respondió a una consulta PromQL de prueba en %s: %v\n", url, err)
+		} else {
+			fmt.Fprintf(out, "[FALTA]  Thanos Querier no respondió a una consulta PromQL de prueba: %v\n", err)
+		}
 		return
 	}
 
-	httpClient := &http.Client{
-		Timeout: 5 * time.Second,
-		// Misma resolución de CA que usa el cliente completo de Prometheus
-		// (internal/promclient): intenta validar contra la CA real del
-		// router de OpenShift y solo degrada a InsecureSkipVerify si no
-		// puede resolverla, dejándolo advertido en el log.
-		Transport: promclient.DiscoverTransport(ctx, client.Kubernetes, logger),
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url+"/-/healthy", nil)
-	if err != nil {
-		fmt.Fprintf(out, "[FALTA]  Thanos Querier: %v\n", err)
-		return
-	}
-	req.Header.Set("Authorization", "Bearer "+token)
-
-	logger.Debug("probing thanos querier", "url", url)
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		fmt.Fprintf(out, "[FALTA]  Thanos Querier no alcanzable en %s: %v\n", url, err)
-		return
-	}
-	defer resp.Body.Close()
-
-	switch {
-	case resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusUnauthorized:
-		fmt.Fprintf(out, "[FALTA]  Thanos Querier respondió %d en %s — falta el rol cluster-monitoring-view\n", resp.StatusCode, url)
-	case resp.StatusCode >= 300:
-		fmt.Fprintf(out, "[FALTA]  Thanos Querier respondió %d en %s\n", resp.StatusCode, url)
-	default:
+	if urlErr == nil {
 		fmt.Fprintf(out, "[OK]     Thanos Querier alcanzable en %s\n", url)
+	} else {
+		fmt.Fprintln(out, "[OK]     Thanos Querier alcanzable")
 	}
 }
