@@ -8,6 +8,12 @@ export default defineConfig({
   integrations: [
     starlight({
       title: "husk",
+      favicon: "/favicon.svg",
+      logo: {
+        light: "./src/assets/husk-logo-light.svg",
+        dark: "./src/assets/husk-logo-dark.svg",
+        alt: "husk",
+      },
       description:
         "CLI de sizing, DR readiness e inventario para Kubernetes/OpenShift.",
       social: [
