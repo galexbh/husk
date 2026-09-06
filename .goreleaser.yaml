@@ -1,0 +1,90 @@
+version: 2
+project_name: husk
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: husk
+    main: .
+    binary: husk
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w
+      - -X github.com/galexbh/husk/internal/version.Version={{ .Version }}
+      - -X github.com/galexbh/husk/internal/version.Commit={{ .FullCommit }}
+      - -X github.com/galexbh/husk/internal/version.BuildDate={{ .Date }}
+
+archives:
+  - formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+checksum:
+  name_template: "checksums.txt"
+
+sboms:
+  - artifacts: archive
+
+# Firma keyless (Sigstore) de los checksums y las imágenes con cosign,
+# usando el token OIDC de GitHub Actions (sin gestionar una clave privada).
+# Requiere `id-token: write` en el workflow y cosign instalado (ver
+# .github/workflows/release.yml).
+signs:
+  - cmd: cosign
+    certificate: "${artifact}.pem"
+    args:
+      - sign-blob
+      - --yes
+      - --output-signature=${signature}
+      - --output-certificate=${certificate}
+      - ${artifact}
+    artifacts: checksum
+    output: true
+
+dockers_v2:
+  - id: husk
+    ids: [husk]
+    dockerfile: Dockerfile.release
+    images:
+      - ghcr.io/galexbh/husk
+      - docker.io/galexbh/husk
+    tags:
+      - "{{ .Version }}"
+      - "{{ .Major }}.{{ .Minor }}"
+      - "latest"
+    platforms: [linux/amd64, linux/arm64]
+    labels:
+      org.opencontainers.image.title: husk
+      org.opencontainers.image.description: "CLI de sizing, DR readiness e inventario para Kubernetes/OpenShift"
+      org.opencontainers.image.version: "{{ .Version }}"
+      org.opencontainers.image.revision: "{{ .FullCommit }}"
+      org.opencontainers.image.created: "{{ .Date }}"
+      org.opencontainers.image.source: "https://github.com/galexbh/husk"
+      org.opencontainers.image.vendor: galexbh
+      org.opencontainers.image.licenses: Apache-2.0
+      org.opencontainers.image.url: "https://github.com/galexbh/husk"
+      org.opencontainers.image.documentation: "https://github.com/galexbh/husk/blob/main/README.md"
+      org.opencontainers.image.base.name: "gcr.io/distroless/static:nonroot"
+      org.opencontainers.image.base.digest: "{{ .Env.BASE_IMAGE_DIGEST }}"
+
+docker_signs:
+  - cmd: cosign
+    args:
+      - sign
+      - --yes
+      - "${artifact}"
+    artifacts: all
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"

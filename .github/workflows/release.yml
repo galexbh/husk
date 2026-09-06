@@ -1,0 +1,62 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  packages: write
+  # Necesario para la firma keyless (Sigstore) de checksums e imágenes con
+  # cosign: el token OIDC de este job hace de identidad, sin gestionar una
+  # clave privada.
+  id-token: write
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+
+      - name: Resolve base image digest
+        run: |
+          go install github.com/google/go-containerregistry/cmd/crane@latest
+          echo "BASE_IMAGE_DIGEST=$(crane digest gcr.io/distroless/static:nonroot)" >> "$GITHUB_ENV"
+
+      - name: Install syft (SBOM generation)
+        uses: anchore/sbom-action/download-syft@v0
+
+      - name: Install cosign (firma keyless de checksums e imágenes)
+        uses: sigstore/cosign-installer@v3
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE_IMAGE_DIGEST: ${{ env.BASE_IMAGE_DIGEST }}

@@ -1,0 +1,17 @@
+# Manifiesto de referencia generado por `husk init rbac` con los valores por
+# defecto (--service-account husk --service-account-namespace husk).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: husk-reader
+  labels:
+    app.kubernetes.io/name: husk
+    app.kubernetes.io/managed-by: husk-init-rbac
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: husk-reader
+subjects:
+  - kind: ServiceAccount
+    name: husk
+    namespace: husk

@@ -1,0 +1,56 @@
+# Ejemplo de configuración de husk. Copia este archivo a ~/.husk/config.yaml
+# o pásalo con --config <path>. Todos los valores mostrados son los defaults
+# hardcodeados en internal/config/defaults.go; solo necesitas declarar las
+# claves que quieras sobrescribir.
+
+namespaces:
+  # Patrones regex de namespaces excluidos por defecto de los análisis.
+  # Excepción: openshift-adp siempre se evalúa durante `dr assess` (estado
+  # del operador OADP), aunque coincida con estos patrones.
+  exclude_patterns:
+    - "^kube-.*$"
+    - "^openshift.*$"
+    - "^default$"
+
+sizing:
+  cpu_percentile: 0.95
+  memory_percentile: 0.99
+  lookback: "7d"
+  cpu_limit_multiplier: 3.0
+  memory_buffer_percent: 0.2
+  # Si el request declarado supera al consumo observado por este factor, el
+  # contenedor se marca "sobreaprovisionado".
+  over_provision_factor: 2.0
+
+capacity:
+  # Por debajo de este % de headroom libre (CPU o memoria), un nodo se
+  # marca en riesgo de saturación. Coincide con el criterio de la
+  # dimensión Capacity del score de resiliencia.
+  headroom_threshold_percent: 30.0
+  # Ventana histórica para el consumo observado por nodo (CPU/memoria
+  # promedio y pico).
+  lookback: "7d"
+
+dr:
+  backup_max_age: "24h"
+  etcd_snapshot_max_age: "7d"
+
+score:
+  weights:
+    sizing: 0.3
+    dr: 0.3
+    capacity: 0.2
+    pdb: 0.1
+    topology: 0.1
+
+inventory:
+  include_extended: false
+  excel:
+    highlight_risks: true
+    freeze_columns: 2
+
+history:
+  # Cuántos snapshots recientes se conservan por cluster en
+  # ~/.husk/history/; los más antiguos se podan automáticamente en cada
+  # `husk report generate`.
+  retain_count: 30

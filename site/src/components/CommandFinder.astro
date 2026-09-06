@@ -1,0 +1,238 @@
+---
+// Buscador de comandos interactivo: filtra en el cliente (sin dependencias
+// ni llamadas de red) sobre la lista de comandos/flags de src/data/commands.ts.
+import { commands, globalFlags, type CommandEntry } from "../data/commands";
+
+function searchBlob(cmd: CommandEntry): string {
+  const parts = [
+    cmd.name,
+    cmd.category,
+    cmd.summary,
+    ...(cmd.badges ?? []),
+    ...cmd.flags.flatMap((f) => [f.flag, f.description]),
+  ];
+  return parts.join(" ").toLowerCase();
+}
+---
+
+<div class="command-finder" data-command-finder>
+  <input
+    type="search"
+    class="command-finder-input"
+    placeholder="Buscar por comando, flag o palabra clave (ej. “excel”, “--dry-run”, “etcd”)…"
+    aria-label="Buscar comandos de husk"
+    autocomplete="off"
+  />
+  <p class="command-finder-status" aria-live="polite"></p>
+
+  <ul class="command-finder-list">
+    {
+      commands.map((cmd) => (
+        <li class="command-finder-item" data-search={searchBlob(cmd)}>
+          <div class="command-finder-item-head">
+            <a href={cmd.href}>
+              <code>{cmd.name}</code>
+            </a>
+            <span class="command-finder-category">{cmd.category}</span>
+            {(cmd.badges ?? []).map((b) => (
+              <span class="command-finder-badge">{b}</span>
+            ))}
+          </div>
+          <p class="command-finder-summary">{cmd.summary}</p>
+          {cmd.flags.length > 0 && (
+            <ul class="command-finder-flags">
+              {cmd.flags.map((f) => (
+                <li>
+                  <code>{f.flag}</code> — {f.description}
+                </li>
+              ))}
+            </ul>
+          )}
+        </li>
+      ))
+    }
+  </ul>
+
+  <p class="command-finder-empty" hidden>
+    Ningún comando coincide con tu búsqueda.{" "}
+    <button type="button" class="command-finder-clear">Limpiar</button>
+  </p>
+
+  <details class="command-finder-globals">
+    <summary>Flags globales (heredados por todos los comandos)</summary>
+    <ul class="command-finder-flags">
+      {globalFlags.map((f) => (
+        <li>
+          <code>{f.flag}</code> — {f.description}
+        </li>
+      ))}
+    </ul>
+  </details>
+</div>
+
+<style>
+  .command-finder {
+    margin: 1.5rem 0;
+  }
+
+  .command-finder-input {
+    width: 100%;
+    box-sizing: border-box;
+    font-size: var(--sl-text-base);
+    padding: 0.6rem 0.9rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.5rem;
+    background-color: var(--sl-color-bg);
+    color: var(--sl-color-text);
+  }
+  .command-finder-input:focus-visible {
+    outline: 2px solid var(--sl-color-accent);
+    outline-offset: 1px;
+  }
+
+  .command-finder-status {
+    margin: 0.5rem 0 0;
+    font-size: var(--sl-text-xs);
+    color: var(--sl-color-gray-3);
+  }
+
+  .command-finder-list {
+    list-style: none;
+    margin: 0.75rem 0 0;
+    padding: 0;
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .command-finder-item {
+    border: 1px solid var(--sl-color-hairline);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    background-color: var(--sl-color-bg-nav);
+  }
+
+  .command-finder-item-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .command-finder-item-head a {
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .command-finder-item-head a:hover {
+    text-decoration: underline;
+  }
+
+  .command-finder-category {
+    font-size: var(--sl-text-xs);
+    color: var(--sl-color-gray-3);
+    border: 1px solid var(--sl-color-hairline);
+    border-radius: 999px;
+    padding: 0.05rem 0.6rem;
+  }
+
+  .command-finder-badge {
+    font-size: var(--sl-text-xs);
+    color: var(--sl-color-text-accent);
+    background-color: var(--sl-color-accent-low);
+    border-radius: 999px;
+    padding: 0.05rem 0.6rem;
+  }
+
+  .command-finder-summary {
+    margin: 0.5rem 0 0;
+    color: var(--sl-color-gray-2);
+  }
+
+  .command-finder-flags {
+    margin: 0.5rem 0 0;
+    padding-left: 1.1rem;
+    font-size: var(--sl-text-sm);
+    color: var(--sl-color-gray-2);
+  }
+  .command-finder-flags li {
+    margin: 0.15rem 0;
+  }
+
+  .command-finder-empty {
+    margin-top: 1rem;
+    color: var(--sl-color-gray-3);
+  }
+  .command-finder-clear {
+    border: none;
+    background: none;
+    color: var(--sl-color-text-accent);
+    cursor: pointer;
+    text-decoration: underline;
+    font: inherit;
+    padding: 0;
+  }
+
+  .command-finder-globals {
+    margin-top: 1.5rem;
+    border: 1px solid var(--sl-color-hairline);
+    border-radius: 0.5rem;
+    padding: 0.6rem 1rem;
+  }
+  .command-finder-globals summary {
+    cursor: pointer;
+    font-weight: 600;
+  }
+</style>
+
+<script>
+  // Se re-ejecuta en la carga inicial y después de cada navegación con
+  // View Transitions (Astro), para que el buscador siga funcionando al
+  // volver a esta página por el historial del navegador.
+  document.addEventListener("astro:page-load", initCommandFinder);
+
+  function initCommandFinder() {
+    const root = document.querySelector<HTMLElement>("[data-command-finder]");
+    if (!root || root.dataset.initialized === "true") return;
+    root.dataset.initialized = "true";
+
+    const input = root.querySelector<HTMLInputElement>(".command-finder-input");
+    const status = root.querySelector<HTMLElement>(".command-finder-status");
+    const empty = root.querySelector<HTMLElement>(".command-finder-empty");
+    const clearBtn = root.querySelector<HTMLButtonElement>(".command-finder-clear");
+    const items = Array.from(root.querySelectorAll<HTMLLIElement>(".command-finder-item"));
+    if (!input || !status || !empty) return;
+
+    const normalize = (s: string) => s.toLowerCase();
+
+    function apply() {
+      const query = normalize(input!.value.trim());
+      const terms = query.split(/\s+/).filter(Boolean);
+      let visible = 0;
+
+      for (const item of items) {
+        const haystack = normalize(item.dataset.search ?? "");
+        const matches = terms.every((t) => haystack.includes(t));
+        item.hidden = !matches;
+        if (matches) visible++;
+      }
+
+      status!.textContent =
+        query === ""
+          ? `${items.length} comandos`
+          : `${visible} de ${items.length} comandos`;
+      empty!.hidden = visible !== 0;
+    }
+
+    input.addEventListener("input", apply);
+    clearBtn?.addEventListener("click", () => {
+      input.value = "";
+      input.focus();
+      apply();
+    });
+
+    // Permite enlazar directamente a una búsqueda: /referencia/buscador/?q=excel
+    const params = new URLSearchParams(location.search);
+    const initial = params.get("q");
+    if (initial) input.value = initial;
+
+    apply();
+  }
+</script>

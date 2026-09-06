@@ -1,0 +1,28 @@
+version: "2"
+
+linters:
+  default: standard
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - unused
+    - revive
+    - gosec
+  settings:
+    errcheck:
+      # Ignorar el error de escribir a un writer de salida (stdout/archivo
+      # ya validado) y de cerrar un archivo en un defer: son errores que
+      # husk no puede remediar de forma útil en ese punto, y revisarlos
+      # explícitamente en cada línea añade ruido sin valor real.
+      exclude-functions:
+        - fmt.Fprintf
+        - fmt.Fprintln
+        - fmt.Fprint
+        - (*os.File).Close
+        - (io.ReadCloser).Close
+        - (*github.com/xuri/excelize/v2.File).Close
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

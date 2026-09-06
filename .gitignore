@@ -1,0 +1,19 @@
+# Binarios
+/husk
+/husk.exe
+/dist/
+
+# Go
+*.test
+*.out
+/vendor/
+
+# Config/estado local del usuario
+.husk/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db

@@ -1,0 +1,12 @@
+# syntax=docker/dockerfile:1
+#
+# Usado únicamente por GoReleaser (dockers_v2) en release: el binario ya
+# viene compilado por el paso `builds`, así que aquí solo se empaqueta.
+FROM gcr.io/distroless/static:nonroot
+COPY husk /usr/local/bin/husk
+
+USER 65532:65532
+WORKDIR /home/nonroot
+
+ENTRYPOINT ["/usr/local/bin/husk"]
+CMD ["--help"]

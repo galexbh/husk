@@ -1,0 +1,9 @@
+# Astro/Starlight
+dist/
+.astro/
+
+# Dependencias
+node_modules/
+
+# Logs
+npm-debug.log*

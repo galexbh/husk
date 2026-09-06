@@ -1,0 +1,22 @@
+---
+title: Buscador de comandos
+description: Filtra en vivo todos los comandos y flags de husk.
+---
+
+import CommandFinder from "../../../components/CommandFinder.astro";
+
+Escribe para filtrar por nombre de comando, categoría, descripción o
+cualquier flag (por ejemplo, `excel`, `--dry-run`, `etcd`, `openshift`).
+El filtro corre enteramente en tu navegador, sin llamadas de red.
+
+<CommandFinder />
+
+:::tip[Enlace directo a una búsqueda]
+Podés compartir un enlace con la búsqueda ya escrita agregando `?q=` a la
+URL de esta página — por ejemplo,
+[`?q=excel`](/husk/referencia/buscador/?q=excel) o
+[`?q=dry-run`](/husk/referencia/buscador/?q=dry-run).
+:::
+
+¿Preferís navegar la referencia completa comando por comando? Empezá por
+[Flags globales](/husk/referencia/flags-globales/).

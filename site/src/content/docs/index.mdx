@@ -1,0 +1,53 @@
+---
+title: husk
+tableOfContents: false
+template: splash
+hero:
+  tagline: CLI de solo lectura para sizing real, DR readiness, capacity planning y score de resiliencia en clusters Kubernetes y OpenShift.
+  actions:
+    - text: Guía rápida
+      link: /husk/empezando/guia-rapida/
+      icon: right-arrow
+      variant: primary
+    - text: Ver en GitHub
+      link: https://github.com/galexbh/husk
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components";
+
+`husk` se conecta directamente a las APIs de Kubernetes/OpenShift con el
+kubeconfig activo del usuario — nunca ejecuta `oc` o `kubectl` como procesos
+externos — y a Prometheus/Thanos Querier cuando el cluster es OpenShift.
+Todos sus comandos de análisis y reporte son **estrictamente de solo
+lectura**: el ClusterRole que necesita solo tiene `get`, `list` y `watch`.
+
+<CardGrid stagger>
+	<Card title="Sizing real" icon="approve-check">
+		Compara `resources.requests`/`limits` contra el consumo histórico real
+		(CPU P95, memoria P99 y picos) vía PromQL, con recomendaciones y
+		`--dry-run`.
+	</Card>
+	<Card title="DR readiness" icon="warning">
+		OADP/Velero, antigüedad de backups por namespace, BackupStorageLocation,
+		snapshot de etcd y soporte CSI snapshot.
+	</Card>
+	<Card title="Capacity planning" icon="rocket">
+		Allocatable vs requests por nodo, headroom y riesgos de concentración de
+		carga, enriquecido con consumo histórico.
+	</Card>
+	<Card title="Score de resiliencia" icon="star">
+		0–100, combinando sizing, DR, capacity, PodDisruptionBudgets y topology
+		spread constraints — con desglose por dimensión.
+	</Card>
+	<Card title="Inventario completo" icon="document">
+		Deployments, StatefulSets, DaemonSets, Services, PVCs, ConfigMaps, Secrets
+		(solo nombres), Nodes, StorageClasses, CRDs — con export a Excel
+		formateado.
+	</Card>
+	<Card title="Reportes e historial" icon="seti:db">
+		`report generate` consolida todo en un solo reporte y guarda un snapshot
+		en `~/.husk/history/`; `report diff` compara dos snapshots.
+	</Card>
+</CardGrid>
