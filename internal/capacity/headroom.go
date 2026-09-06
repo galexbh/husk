@@ -34,13 +34,29 @@ func headroomPercent(allocatable, requested resource.Quantity) float64 {
 	}
 }
 
-// nodeRisk determina el riesgo de un nodo a partir de su estado y headroom.
-func nodeRisk(ready, unschedulable bool, cpuHeadroom, memHeadroom, thresholdPercent float64) model.RiskLevel {
+// nodeRisk determina el riesgo de un nodo y qué eje(s) lo causan. RiskRed:
+// nodo no Ready/unschedulable, o CPU y memoria simultáneamente bajo
+// threshold (saturación en ambos ejes). RiskYellow: un único eje bajo
+// threshold con el otro sano — nivel intermedio para no tratar igual un
+// nodo con headroom ajustado en un solo eje que uno realmente saturado
+// (antes cualquier eje bajo el umbral marcaba RiskRed). RiskGreen: ningún
+// eje bajo threshold. El segundo valor de retorno indica qué eje(s)
+// dispararon el nivel devuelto ("cpu", "memory", ambos, o nil cuando el
+// riesgo viene de not-ready/unschedulable o no hay riesgo).
+func nodeRisk(ready, unschedulable bool, cpuHeadroom, memHeadroom, thresholdPercent float64) (model.RiskLevel, []string) {
 	if !ready || unschedulable {
-		return model.RiskRed
+		return model.RiskRed, nil
 	}
-	if cpuHeadroom < thresholdPercent || memHeadroom < thresholdPercent {
-		return model.RiskRed
+	cpuAtRisk := cpuHeadroom < thresholdPercent
+	memAtRisk := memHeadroom < thresholdPercent
+	switch {
+	case cpuAtRisk && memAtRisk:
+		return model.RiskRed, []string{"cpu", "memory"}
+	case cpuAtRisk:
+		return model.RiskYellow, []string{"cpu"}
+	case memAtRisk:
+		return model.RiskYellow, []string{"memory"}
+	default:
+		return model.RiskGreen, nil
 	}
-	return model.RiskGreen
 }

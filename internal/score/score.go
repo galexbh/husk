@@ -109,7 +109,7 @@ func scoreSizing(r *model.SizingReport) (float64, []model.Finding, bool) {
 
 	for _, w := range r.Workloads {
 		for _, c := range w.Containers {
-			if !c.HasData {
+			if !c.HasData || c.Verdict == "sidecar-ignorado" {
 				continue
 			}
 			anyEvaluable = true
@@ -151,7 +151,9 @@ func scoreDR(dr *model.DRReadiness) (float64, []model.Finding) {
 		score -= drOADPUnhealthyDeduction
 	}
 
-	score -= capDeduction(float64(len(dr.NamespacesWithoutBackup))*drMissingBackupDeduction, drMissingBackupCap)
+	if total := len(dr.ApplicationNamespaces); total > 0 {
+		score -= drMissingBackupMaxDeduction * float64(len(dr.NamespacesWithoutBackup)) / float64(total)
+	}
 	score -= capDeduction(float64(len(dr.NamespacesWithStaleBackup))*drStaleBackupDeduction, drStaleBackupCap)
 
 	if dr.EtcdCheckApplicable && dr.EtcdSnapshot != nil {
@@ -193,19 +195,30 @@ func scoreTopology(dr *model.DRReadiness) (float64, []model.Finding) {
 	return clampScore(score), filterFindings(dr.Findings, "missing-topology-spread")
 }
 
+// scoreCapacity pondera cada nodo según su nivel de riesgo (ver
+// capacity.nodeRisk): ALTO cuenta entero, MEDIO (un solo eje de headroom
+// bajo el umbral, el otro sano) cuenta la mitad
+// (capacityHeadroomWarningWeight), para no tratar igual un nodo con un
+// único eje ajustado que uno realmente saturado en ambos.
 func scoreCapacity(c *model.CapacityReport) (float64, []model.Finding) {
 	score := 100.0
 	var findings []model.Finding
 
-	saturated := 0
+	var altoCount, medioCount int
 	for _, n := range c.Nodes {
-		if n.Risk == model.RiskRed {
-			saturated++
-			findings = append(findings, model.NewFinding(model.RiskRed, "node-saturated", "", n.Name,
-				fmt.Sprintf("nodo %s con headroom por debajo del umbral (CPU %.1f%%, memoria %.1f%%)", n.Name, n.CPUHeadroomPercent, n.MemoryHeadroomPercent)))
+		switch n.Risk {
+		case model.RiskRed:
+			altoCount++
+			findings = append(findings, model.NewFinding(model.RiskRed, "node-saturated", "", n.Name, nodeSaturatedMessage(n)))
+		case model.RiskYellow:
+			medioCount++
+			findings = append(findings, model.NewFinding(model.RiskYellow, "node-headroom-warning", "", n.Name, nodeHeadroomWarningMessage(n)))
 		}
 	}
-	score -= capDeduction(float64(saturated)*capacitySaturatedNodeDeduction, capacitySaturatedNodeCap)
+	if total := len(c.Nodes); total > 0 {
+		weighted := float64(altoCount) + capacityHeadroomWarningWeight*float64(medioCount)
+		score -= capacitySaturatedMaxDeduction * weighted / float64(total)
+	}
 
 	score -= capDeduction(float64(len(c.ConcentrationRisks))*capacityConcentrationDeduction, capacityConcentrationCap)
 	for _, r := range c.ConcentrationRisks {
@@ -213,6 +226,20 @@ func scoreCapacity(c *model.CapacityReport) (float64, []model.Finding) {
 	}
 
 	return clampScore(score), findings
+}
+
+func nodeSaturatedMessage(n model.NodeCapacity) string {
+	if len(n.RiskAxes) == 0 {
+		return fmt.Sprintf("nodo %s no está Ready o está marcado unschedulable", n.Name)
+	}
+	return fmt.Sprintf("nodo %s con headroom crítico en CPU y memoria (CPU %.1f%%, memoria %.1f%%)", n.Name, n.CPUHeadroomPercent, n.MemoryHeadroomPercent)
+}
+
+func nodeHeadroomWarningMessage(n model.NodeCapacity) string {
+	if len(n.RiskAxes) == 1 && n.RiskAxes[0] == "cpu" {
+		return fmt.Sprintf("nodo %s con headroom ajustado en CPU (%.1f%%); memoria saludable (%.1f%%)", n.Name, n.CPUHeadroomPercent, n.MemoryHeadroomPercent)
+	}
+	return fmt.Sprintf("nodo %s con headroom ajustado en memoria (%.1f%%); CPU saludable (%.1f%%)", n.Name, n.MemoryHeadroomPercent, n.CPUHeadroomPercent)
 }
 
 func filterFindings(all []model.Finding, categories ...string) []model.Finding {

@@ -48,9 +48,9 @@ export const commands: CommandEntry[] = [
     name: "husk inventory",
     category: "Inventario",
     summary:
-      "Inventario completo: Deployments, StatefulSets, DaemonSets, Services, PVCs, ConfigMaps, Secrets (solo nombres), Nodes, StorageClasses, CRDs.",
+      "Inventario completo: Deployments, StatefulSets, DaemonSets, Services, PVCs, ConfigMaps, Secrets (solo nombres), Nodes, StorageClasses, CRDs, ResourceQuotas.",
     flags: [
-      { flag: "--extended", description: "Incluye RBAC, NetworkPolicies, PDBs, ResourceQuotas, LimitRanges, HPAs, Ingresses/Routes." },
+      { flag: "--extended", description: "Incluye RBAC, NetworkPolicies, PDBs, LimitRanges, HPAs, Ingresses/Routes." },
     ],
     badges: ["Excel"],
     href: "/husk/referencia/inventory/",
@@ -61,7 +61,7 @@ export const commands: CommandEntry[] = [
     summary:
       "Versión ejecutiva del inventario: conteos agregados y hallazgos de riesgo.",
     flags: [
-      { flag: "--extended", description: "Necesario para el hallazgo de namespaces sin ResourceQuota." },
+      { flag: "--extended", description: "Incluye RBAC, NetworkPolicies, PDBs, LimitRanges, HPAs, Ingresses/Routes." },
     ],
     href: "/husk/referencia/inventory/",
   },

@@ -59,9 +59,10 @@ actual — nunca requiere credenciales separadas.
 
 5. **Inventario de recursos:** inventario completo del cluster
    (Deployments, StatefulSets, DaemonSets, Services, PVCs, ConfigMaps,
-   Secrets -solo nombres-, Nodes, StorageClasses, CRDs), con resumen
-   ejecutivo o detalle extendido (RBAC, NetworkPolicies, PDBs,
-   ResourceQuotas, HPAs, Ingresses/Routes). (`husk inventory`,
+   Secrets -solo nombres-, Nodes, StorageClasses, CRDs, ResourceQuotas), con
+   resumen ejecutivo o detalle extendido (RBAC, NetworkPolicies, PDBs,
+   LimitRanges, HPAs, Ingresses/Routes). ResourceQuotas se recolecta
+   siempre, sin necesitar `--extended`. (`husk inventory`,
    `internal/inventory`).
 
 6. **Reporte consolidado e historial:** `husk report generate` corre las
@@ -149,7 +150,9 @@ tener un kubeconfig válido (típicamente vía `oc login`), pero el binario
   columnas congeladas, hipervínculos entre hojas — `internal/excel`).
 - `husk sizing report [--dry-run]` — tabla de sizing con recomendaciones;
   `--dry-run` imprime el patch YAML sugerido por contenedor, nunca aplica
-  cambios. Requiere OpenShift (Thanos Querier).
+  cambios. Requiere OpenShift (Thanos Querier). Los contenedores sidecar
+  conocidos (`sizing.sidecar_container_names`) se excluyen del veredicto con
+  un estado propio (`sidecar-ignorado`).
 - `husk capacity nodes` — headroom por nodo y riesgos de concentración de
   carga; funciona sin Prometheus (el consumo histórico es un
   enriquecimiento opcional).
@@ -176,6 +179,15 @@ tener un kubeconfig válido (típicamente vía `oc login`), pero el binario
   (`internal/alertmanager`), distinguiendo incidente actual de riesgo
   preventivo.
 - Autocompletado de shell nativo de Cobra: `husk completion bash|zsh|fish`.
+
+# Consumo del CLI por agentes de IA
+
+`husk` no expone un servidor MCP: un agente de IA lo consume igual que un
+humano, invocando el binario/imagen Docker con `--output json` y parseando la
+salida. La guía completa (comandos seguros, patrón de invocación, esquema del
+JSON, cómo interpretar el score) vive en `docs/agentes-ia.md` — **si sos un
+agente de IA operando sobre este repositorio o este CLI, leé ese archivo antes
+de ejecutar o modificar comandos**, no reinterpretes el esquema JSON a ojo.
 
 # Flags globales
 
@@ -214,6 +226,19 @@ sizing:
   cpu_limit_multiplier: 3.0
   memory_buffer_percent: 0.2
   over_provision_factor: 2.0
+  sidecar_container_names:
+    - "istio-proxy"
+    - "istio-init"
+    - "linkerd-proxy"
+    - "dynatrace-oneagent"
+    - "oneagent"
+    - "zabbix-agent"
+    - "zabbix-agent2"
+    - "datadog-agent"
+    - "filebeat"
+    - "fluentd"
+    - "fluent-bit"
+    - "vault-agent"
 
 capacity:
   headroom_threshold_percent: 30.0
@@ -312,13 +337,18 @@ Promedio ponderado de cinco sub-scores (`internal/score`):
   ningún contenedor tiene consumo histórico observable (sin Prometheus),
   la dimensión se marca no disponible y su peso se redistribuye entre las
   demás en vez de contar como 0.
-- **DR (30%):** 100 menos deducciones fijas (con tope) por OADP no
-  instalado/no healthy, namespaces sin backup o con backup vencido,
-  snapshot de etcd no verificable o vencido, StorageClasses sin soporte CSI
-  snapshot.
-- **Capacity (20%):** 100 menos deducciones fijas por nodo saturado
-  (headroom bajo `capacity.headroom_threshold_percent`, default 30%) y por
-  riesgo de concentración de carga.
+- **DR (30%):** 100 menos una deducción fija (con tope) por OADP no
+  instalado/no healthy; una deducción **proporcional** al porcentaje de
+  namespaces de aplicación sin backup (no fija por namespace, para que el
+  mismo hallazgo no pese distinto según el tamaño del cluster); deducciones
+  fijas (con tope) por namespaces con backup vencido, snapshot de etcd no
+  verificable o vencido, y StorageClasses sin soporte CSI snapshot.
+- **Capacity (20%):** 100 menos una deducción **proporcional** al
+  porcentaje de nodos en riesgo: ALTO (headroom bajo
+  `capacity.headroom_threshold_percent`, default 30%, en CPU **y** memoria
+  simultáneamente, o nodo no-Ready/unschedulable) cuenta entero, MEDIO (un
+  solo eje bajo el umbral, el otro sano) cuenta la mitad; más una deducción
+  fija (con tope) por riesgo de concentración de carga.
 - **PodDisruptionBudgets (10%)** y **Topology spread (10%):**
   proporcionales (`100 × workloads críticos cubiertos / total`), para que
   el resultado no dependa del tamaño del cluster.
@@ -350,6 +380,12 @@ Antes de dar por terminado cualquier cambio en el CLI:
    `k8s.io/client-go/dynamic/fake`) o un servidor HTTP simulado para
    Prometheus/Alertmanager — es el patrón ya usado en
    `internal/{inventory,capacity,dr,sizing}/*_test.go`.
+7. Si agregaste una funcionalidad relevante para agentes de IA (un comando
+   nuevo, una categoría de `Finding` nueva, o un campo nuevo expuesto en el
+   JSON de salida): agrega la entrada correspondiente en
+   `internal/model/finding_catalog.go` (si es una categoría de hallazgo) y
+   actualiza `docs/agentes-ia.md` y `site/src/content/docs/guias/agentes-ia.md`
+   en el mismo cambio.
 
 ## Subagentes
 

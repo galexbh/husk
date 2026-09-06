@@ -1,6 +1,7 @@
 package report
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/galexbh/husk/internal/model"
@@ -39,7 +40,23 @@ func TestBuildRecommendations_KnownAndUnknownCategory(t *testing.T) {
 	if recs[0].Action == known.Message {
 		t.Error("una categoría conocida debería producir una acción específica, no repetir el mensaje")
 	}
-	if recs[1].Action != unknown.Message {
-		t.Error("una categoría desconocida debería caer al mensaje original del hallazgo")
+	// Una categoría sin entrada en el catálogo (internal/model/finding_catalog.go)
+	// cae al marcador visible de model.Guidance, no al mensaje original en
+	// silencio: así un olvido se nota en la salida.
+	if !strings.Contains(recs[1].Action, "falta agregar la categoría") {
+		t.Errorf("recs[1].Action = %q, want el marcador visible de categoría sin documentar", recs[1].Action)
+	}
+}
+
+func TestBuildRecommendations_FallsBackToMessageWhenRecommendationEmpty(t *testing.T) {
+	// Un Finding sin Recommendation (ej. deserializado de un snapshot
+	// histórico generado antes de este campo) cae al Message original, en
+	// vez de quedar con una acción vacía.
+	f := model.Finding{ID: "x", Category: "missing-pdb", Message: "mensaje histórico"}
+
+	recs := BuildRecommendations([]model.Finding{f})
+
+	if recs[0].Action != "mensaje histórico" {
+		t.Errorf("Action = %q, want el Message original como fallback", recs[0].Action)
 	}
 }

@@ -118,7 +118,9 @@ func TestAnalyze_TaintedNodeExcluded(t *testing.T) {
 
 func TestAnalyze_LowHeadroomIsRisky(t *testing.T) {
 	n1 := node("node-1", "4", "8Gi", "110", nil, true)
-	p1 := pod("app-1", "shop", "node-1", nil, "3.5", "2Gi") // 87.5% pedido -> < 30% headroom
+	// CPU: 87.5% pedido -> 12.5% headroom (< 30%). Memoria: 75% pedido ->
+	// 25% headroom (< 30%). Ambos ejes bajo el umbral -> riesgo ALTO.
+	p1 := pod("app-1", "shop", "node-1", nil, "3.5", "6Gi")
 
 	client := &k8sclient.Client{Kubernetes: fake.NewSimpleClientset(n1, p1)}
 	a := New(client, nil, testCfg())
@@ -128,7 +130,29 @@ func TestAnalyze_LowHeadroomIsRisky(t *testing.T) {
 		t.Fatalf("Analyze: %v", err)
 	}
 	if report.Nodes[0].Risk != "red" {
-		t.Errorf("Risk = %q, want red (headroom bajo)", report.Nodes[0].Risk)
+		t.Errorf("Risk = %q, want red (headroom bajo en ambos ejes)", report.Nodes[0].Risk)
+	}
+}
+
+func TestAnalyze_SingleAxisIsMedio(t *testing.T) {
+	n1 := node("node-1", "4", "8Gi", "110", nil, true)
+	// CPU: 87.5% pedido -> 12.5% headroom (< 30%). Memoria: 12.5% pedido ->
+	// 87.5% headroom (sana). Un solo eje bajo el umbral -> riesgo MEDIO.
+	p1 := pod("app-1", "shop", "node-1", nil, "3.5", "1Gi")
+
+	client := &k8sclient.Client{Kubernetes: fake.NewSimpleClientset(n1, p1)}
+	a := New(client, nil, testCfg())
+
+	report, err := a.Analyze(context.Background())
+	if err != nil {
+		t.Fatalf("Analyze: %v", err)
+	}
+	nc := report.Nodes[0]
+	if nc.Risk != "yellow" {
+		t.Errorf("Risk = %q, want yellow (un solo eje con headroom bajo)", nc.Risk)
+	}
+	if len(nc.RiskAxes) != 1 || nc.RiskAxes[0] != "cpu" {
+		t.Errorf("RiskAxes = %v, want [cpu]", nc.RiskAxes)
 	}
 }
 

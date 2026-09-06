@@ -61,6 +61,9 @@ func BuildInventoryWorkbook(inv *model.Inventory, freezeColumns int, highlightRi
 	if err := addSheet("CRDs", crdsSheet(inv.CRDs)); err != nil {
 		return nil, err
 	}
+	if err := addSheet("ResourceQuotas", resourceQuotasSheet(inv.ResourceQuotas)); err != nil {
+		return nil, err
+	}
 
 	if ext := inv.Extended; ext != nil {
 		if err := addSheet("Roles", rbacSheet("Roles", ext.Roles)); err != nil {
@@ -79,9 +82,6 @@ func BuildInventoryWorkbook(inv *model.Inventory, freezeColumns int, highlightRi
 			return nil, err
 		}
 		if err := addSheet("PodDisruptionBudgets", pdbsSheet(ext.PodDisruptionBudgets)); err != nil {
-			return nil, err
-		}
-		if err := addSheet("ResourceQuotas", resourceQuotasSheet(ext.ResourceQuotas)); err != nil {
 			return nil, err
 		}
 		if err := addSheet("LimitRanges", limitRangesSheet(ext.LimitRanges)); err != nil {

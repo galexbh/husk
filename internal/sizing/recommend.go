@@ -2,6 +2,7 @@ package sizing
 
 import (
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/api/resource"
 
@@ -52,6 +53,12 @@ func buildContainerSizing(ctr model.ContainerSummary, cfg config.SizingConfig, o
 		return cs
 	}
 
+	if isSidecarContainer(ctr.Name, cfg.SidecarContainerNames) {
+		cs.Verdict = "sidecar-ignorado"
+		cs.Risk = model.RiskUnknown
+		return cs
+	}
+
 	hasLimits := ctr.CPULimit != "" && ctr.MemoryLimit != ""
 	if !hasLimits {
 		cs.Verdict = "sin-limites"
@@ -80,6 +87,23 @@ func buildContainerSizing(ctr model.ContainerSummary, cfg config.SizingConfig, o
 
 	applyRecommendation(&cs, cfg, obs)
 	return cs
+}
+
+// isSidecarContainer reporta si name coincide (por substring,
+// case-insensitive) con algún patrón de patterns — usado para excluir
+// contenedores sidecar conocidos (service mesh, agentes de
+// observabilidad/APM) del veredicto de sizing de la aplicación.
+func isSidecarContainer(name string, patterns []string) bool {
+	lower := strings.ToLower(name)
+	for _, p := range patterns {
+		if p == "" {
+			continue
+		}
+		if strings.Contains(lower, strings.ToLower(p)) {
+			return true
+		}
+	}
+	return false
 }
 
 // exceedsFactor reporta si currentQty (un request/limit ya parseado desde

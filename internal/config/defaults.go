@@ -19,6 +19,11 @@ func Default() *Config {
 			CPULimitMultiplier:  3.0,
 			MemoryBufferPercent: 0.2,
 			OverProvisionFactor: 2.0,
+			SidecarContainerNames: []string{
+				"istio-proxy", "istio-init", "linkerd-proxy",
+				"dynatrace-oneagent", "oneagent", "zabbix-agent", "zabbix-agent2",
+				"datadog-agent", "filebeat", "fluentd", "fluent-bit", "vault-agent",
+			},
 		},
 		Capacity: CapacityConfig{
 			HeadroomThresholdPercent: 30.0,

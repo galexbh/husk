@@ -46,6 +46,7 @@ export default defineConfig({
             { label: "Docker y OCI", slug: "guias/docker" },
             { label: "Historial y report diff", slug: "guias/historial-y-diff" },
             { label: "Métricas PromQL", slug: "guias/metricas" },
+            { label: "Guía para agentes de IA", slug: "guias/agentes-ia" },
           ],
         },
         {

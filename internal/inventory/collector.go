@@ -25,8 +25,9 @@ type Options struct {
 	// namespace y omite el filtro de exclusión (una petición explícita del
 	// usuario tiene prioridad sobre la política de exclusión por defecto).
 	Namespace string
-	// Extended incluye RBAC, NetworkPolicies, PDBs, ResourceQuotas,
-	// LimitRanges, HPAs e Ingresses/Routes.
+	// Extended incluye RBAC, NetworkPolicies, PDBs, LimitRanges, HPAs e
+	// Ingresses/Routes. ResourceQuotas ya no depende de este flag: se
+	// recolecta siempre (ver Collector.collectResourceQuotas).
 	Extended bool
 }
 
@@ -69,6 +70,9 @@ func (c *Collector) Collect(ctx context.Context, opts Options) (*model.Inventory
 		return nil, nil, err
 	}
 	if err := c.collectConfigAndSecrets(ctx, inv, namespaces); err != nil {
+		return nil, nil, err
+	}
+	if err := c.collectResourceQuotas(ctx, inv, namespaces); err != nil {
 		return nil, nil, err
 	}
 	if err := c.collectClusterScoped(ctx, inv); err != nil {

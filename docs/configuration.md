@@ -20,12 +20,13 @@ completo y comentado.
 | `sizing.cpu_limit_multiplier` | `float` | `3.0` | Multiplicador sugerido para limits de CPU. |
 | `sizing.memory_buffer_percent` | `float` | `0.2` | Buffer sugerido sobre el pico de memoria observado. |
 | `sizing.over_provision_factor` | `float` | `2.0` | Si el request declarado supera al consumo observado por este factor, se marca "sobreaprovisionado". |
+| `sizing.sidecar_container_names` | `[]string` | ver `examples/config.yaml` | Fragmentos de nombre (substring, case-insensitive) de contenedores sidecar conocidos; se marcan `sidecar-ignorado` en vez de aplicarles el veredicto de sizing de la app. |
 | `capacity.headroom_threshold_percent` | `float` | `30.0` | Por debajo de este % de headroom libre (CPU o memoria), un nodo se marca en riesgo de saturación. |
 | `capacity.lookback` | `string` (duración) | `"7d"` | Ventana histórica para el consumo observado por nodo. |
 | `dr.backup_max_age` | `string` (duración) | `"24h"` | Antigüedad máxima aceptable de un backup. |
 | `dr.etcd_snapshot_max_age` | `string` (duración) | `"7d"` | Antigüedad máxima aceptable del snapshot de etcd. |
 | `score.weights.*` | `float` | `sizing 0.3, dr 0.3, capacity 0.2, pdb 0.1, topology 0.1` | Pesos del score de resiliencia; deben sumar 1.0. |
-| `inventory.include_extended` | `bool` | `false` | Incluye RBAC/NetworkPolicies/PDBs/ResourceQuotas/LimitRanges/HPAs/Ingresses por defecto. |
+| `inventory.include_extended` | `bool` | `false` | Incluye RBAC/NetworkPolicies/PDBs/LimitRanges/HPAs/Ingresses por defecto (ResourceQuotas ya se incluye siempre, sin depender de esta clave). |
 | `inventory.excel.highlight_risks` | `bool` | `true` | Colores condicionales de riesgo en el Excel generado. |
 | `inventory.excel.freeze_columns` | `int` | `2` | Columnas congeladas junto con la fila de encabezados. |
 | `history.retain_count` | `int` | `30` | Snapshots recientes conservados por cluster en `~/.husk/history/`; los más antiguos se podan automáticamente en cada `report generate`. |

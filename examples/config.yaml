@@ -21,6 +21,23 @@ sizing:
   # Si el request declarado supera al consumo observado por este factor, el
   # contenedor se marca "sobreaprovisionado".
   over_provision_factor: 2.0
+  # Fragmentos de nombre (comparación case-insensitive, substring) que
+  # identifican contenedores sidecar conocidos (service mesh, agentes de
+  # observabilidad/APM); se marcan "sidecar-ignorado" en vez de aplicarles
+  # el veredicto de sizing de la app.
+  sidecar_container_names:
+    - "istio-proxy"
+    - "istio-init"
+    - "linkerd-proxy"
+    - "dynatrace-oneagent"
+    - "oneagent"
+    - "zabbix-agent"
+    - "zabbix-agent2"
+    - "datadog-agent"
+    - "filebeat"
+    - "fluentd"
+    - "fluent-bit"
+    - "vault-agent"
 
 capacity:
   # Por debajo de este % de headroom libre (CPU o memoria), un nodo se

@@ -30,6 +30,19 @@ sizing:
   cpu_limit_multiplier: 3.0
   memory_buffer_percent: 0.2
   over_provision_factor: 2.0
+  sidecar_container_names:
+    - "istio-proxy"
+    - "istio-init"
+    - "linkerd-proxy"
+    - "dynatrace-oneagent"
+    - "oneagent"
+    - "zabbix-agent"
+    - "zabbix-agent2"
+    - "datadog-agent"
+    - "filebeat"
+    - "fluentd"
+    - "fluent-bit"
+    - "vault-agent"
 
 capacity:
   headroom_threshold_percent: 30.0
@@ -68,12 +81,13 @@ history:
 | `sizing.cpu_limit_multiplier` | `float` | `3.0` | Multiplicador sugerido para `limits.cpu` cuando un contenedor no tiene límites. |
 | `sizing.memory_buffer_percent` | `float` | `0.2` | Buffer sugerido sobre el pico de memoria observado. |
 | `sizing.over_provision_factor` | `float` | `2.0` | Si el request declarado supera al consumo observado por este factor, se marca "sobreaprovisionado". |
-| `capacity.headroom_threshold_percent` | `float` | `30.0` | Por debajo de este % de headroom libre (CPU o memoria), un nodo se marca en riesgo de saturación. Coincide con el criterio de la dimensión Capacity del score. |
+| `sizing.sidecar_container_names` | `[]string` | ver arriba | Fragmentos de nombre (substring, case-insensitive) de contenedores sidecar conocidos; se marcan `sidecar-ignorado` en vez de aplicarles el veredicto de sizing de la app. |
+| `capacity.headroom_threshold_percent` | `float` | `30.0` | Por debajo de este % de headroom libre, un nodo entra en riesgo: MEDIO si solo CPU o solo memoria está bajo el umbral, ALTO si ambos lo están (o el nodo no está Ready/está unschedulable). Coincide con el criterio de la dimensión Capacity del score. |
 | `capacity.lookback` | `string` (duración) | `"7d"` | Ventana histórica para el consumo observado por nodo. |
 | `dr.backup_max_age` | `string` (duración) | `"24h"` | Antigüedad máxima aceptable del backup más reciente de un namespace. |
 | `dr.etcd_snapshot_max_age` | `string` (duración) | `"7d"` | Antigüedad máxima aceptable del snapshot de etcd. |
 | `score.weights.*` | `float` | `sizing 0.3, dr 0.3, capacity 0.2, pdb 0.1, topology 0.1` | Pesos del score de resiliencia por dimensión; deben sumar 1.0. |
-| `inventory.include_extended` | `bool` | `false` | Incluye RBAC/NetworkPolicies/PDBs/ResourceQuotas/LimitRanges/HPAs/Ingresses por defecto (equivalente a `--extended`). |
+| `inventory.include_extended` | `bool` | `false` | Incluye RBAC/NetworkPolicies/PDBs/LimitRanges/HPAs/Ingresses por defecto (equivalente a `--extended`). ResourceQuotas ya se incluye siempre, sin depender de esta clave. |
 | `inventory.excel.highlight_risks` | `bool` | `true` | Colores condicionales de riesgo (rojo/amarillo/verde) en el Excel generado. |
 | `inventory.excel.freeze_columns` | `int` | `2` | Columnas congeladas junto con la fila de encabezados en cada hoja. |
 | `history.retain_count` | `int` | `30` | Snapshots recientes conservados por cluster en `~/.husk/history/`; los más antiguos se podan automáticamente en cada `report generate`. |

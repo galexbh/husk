@@ -36,6 +36,11 @@ type NodeCapacity struct {
 	HasMetrics         bool   `json:"hasMetrics"`
 
 	Risk RiskLevel `json:"risk"`
+	// RiskAxes indica qué eje(s) de headroom dispararon Risk: "cpu",
+	// "memory", ambos, o vacío (Risk=green, o el nodo no está Ready/está
+	// unschedulable, donde el problema no es de headroom sino de
+	// disponibilidad del nodo).
+	RiskAxes []string `json:"riskAxes,omitempty"`
 }
 
 // ConcentrationRisk señala un workload cuyas réplicas están concentradas en

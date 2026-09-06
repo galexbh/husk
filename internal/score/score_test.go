@@ -1,6 +1,7 @@
 package score
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/galexbh/husk/internal/config"
@@ -122,7 +123,40 @@ func TestCompute_PDBAndTopologyAreProportional(t *testing.T) {
 func TestCompute_CapacitySaturatedNode(t *testing.T) {
 	capReport := &model.CapacityReport{
 		Nodes: []model.NodeCapacity{
-			{Name: "node-1", Risk: model.RiskRed},
+			{Name: "node-1", Risk: model.RiskRed, RiskAxes: []string{"cpu", "memory"}},
+			{Name: "node-2", Risk: model.RiskGreen},
+		},
+	}
+	in := Inputs{Weights: testWeights(), Capacity: capReport, DR: healthyDR()}
+	s := Compute(in)
+
+	for _, d := range s.Breakdown {
+		if d.Name == "capacity" && d.Score != 70 {
+			t.Errorf("capacity.Score = %v, want 70 (100 - 60*(1/2): 1 de 2 nodos en riesgo ALTO)", d.Score)
+		}
+	}
+}
+
+func TestCompute_CapacitySaturation_ScalesWithClusterSize(t *testing.T) {
+	nodes := []model.NodeCapacity{{Name: "node-1", Risk: model.RiskRed, RiskAxes: []string{"cpu", "memory"}}}
+	for i := 2; i <= 10; i++ {
+		nodes = append(nodes, model.NodeCapacity{Name: fmt.Sprintf("node-%d", i), Risk: model.RiskGreen})
+	}
+	capReport := &model.CapacityReport{Nodes: nodes}
+	in := Inputs{Weights: testWeights(), Capacity: capReport, DR: healthyDR()}
+	s := Compute(in)
+
+	for _, d := range s.Breakdown {
+		if d.Name == "capacity" && d.Score != 94 {
+			t.Errorf("capacity.Score = %v, want 94 (100 - 60*(1/10): el mismo hallazgo pesa menos en un cluster más grande)", d.Score)
+		}
+	}
+}
+
+func TestCompute_CapacityMedioWeightsHalfOfAlto(t *testing.T) {
+	capReport := &model.CapacityReport{
+		Nodes: []model.NodeCapacity{
+			{Name: "node-1", Risk: model.RiskYellow, RiskAxes: []string{"cpu"}},
 			{Name: "node-2", Risk: model.RiskGreen},
 		},
 	}
@@ -131,7 +165,60 @@ func TestCompute_CapacitySaturatedNode(t *testing.T) {
 
 	for _, d := range s.Breakdown {
 		if d.Name == "capacity" && d.Score != 85 {
-			t.Errorf("capacity.Score = %v, want 85 (100 - 15 por un nodo saturado)", d.Score)
+			t.Errorf("capacity.Score = %v, want 85 (100 - 60*(0.5/2): un nodo MEDIO pesa la mitad que uno ALTO)", d.Score)
+		}
+	}
+}
+
+func TestCompute_DRMissingBackup_Proportional(t *testing.T) {
+	dr := healthyDR()
+	dr.ApplicationNamespaces = []string{"shop", "billing", "auth", "reports"}
+	dr.NamespacesWithoutBackup = []string{"shop"}
+
+	in := Inputs{Weights: testWeights(), Capacity: &model.CapacityReport{}, DR: dr}
+	s := Compute(in)
+
+	for _, d := range s.Breakdown {
+		if d.Name == "dr" && d.Score != 90 {
+			t.Errorf("dr.Score = %v, want 90 (100 - 40*(1/4))", d.Score)
+		}
+	}
+}
+
+func TestCompute_DRMissingBackup_ScalesWithClusterSize(t *testing.T) {
+	namespaces := make([]string, 20)
+	for i := range namespaces {
+		namespaces[i] = fmt.Sprintf("ns-%d", i)
+	}
+	dr := healthyDR()
+	dr.ApplicationNamespaces = namespaces
+	dr.NamespacesWithoutBackup = []string{"ns-0"}
+
+	in := Inputs{Weights: testWeights(), Capacity: &model.CapacityReport{}, DR: dr}
+	s := Compute(in)
+
+	for _, d := range s.Breakdown {
+		if d.Name == "dr" && d.Score != 98 {
+			t.Errorf("dr.Score = %v, want 98 (100 - 40*(1/20)): el mismo hallazgo pesa menos en un cluster con más namespaces", d.Score)
+		}
+	}
+}
+
+func TestCompute_SizingSidecarIgnored_NoDeduction(t *testing.T) {
+	sizing := &model.SizingReport{
+		Workloads: []model.WorkloadSizing{{
+			Kind: "Deployment", Namespace: "shop", Name: "api",
+			Containers: []model.ContainerSizing{
+				{Name: "istio-proxy", HasData: true, Verdict: "sidecar-ignorado", Risk: model.RiskUnknown},
+			},
+		}},
+	}
+	in := Inputs{Weights: testWeights(), Sizing: sizing, Capacity: &model.CapacityReport{}, DR: healthyDR()}
+	s := Compute(in)
+
+	for _, d := range s.Breakdown {
+		if d.Name == "sizing" && d.Available {
+			t.Error("sizing con solo contenedores sidecar-ignorado debería marcarse no disponible, no evaluarse")
 		}
 	}
 }

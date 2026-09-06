@@ -21,6 +21,7 @@ var sizingOrCapacityCategories = map[string]bool{
 	"sizing-under-provisioned": true,
 	"sizing-over-provisioned":  true,
 	"node-saturated":           true,
+	"node-headroom-warning":    true,
 	"concentration-risk":       true,
 }
 

@@ -26,7 +26,7 @@ husk inventory summary
 
 Un resumen ejecutivo: conteos por tipo de recurso y hallazgos de riesgo
 (workloads con una sola réplica, sin `resources.limits`, namespaces sin
-`ResourceQuota` si usas `--extended`).
+`ResourceQuota`).
 
 Para el inventario completo con todas las hojas formateadas en Excel:
 

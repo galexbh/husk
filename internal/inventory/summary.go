@@ -64,20 +64,18 @@ func BuildSummary(inv *model.Inventory, namespaces []string) *model.InventorySum
 		}
 	}
 
-	if inv.Extended != nil {
-		s.HasQuotaData = true
-		withQuota := make(map[string]bool, len(inv.Extended.ResourceQuotas))
-		for _, q := range inv.Extended.ResourceQuotas {
-			withQuota[q.Namespace] = true
-		}
-		for _, ns := range namespaces {
-			if !withQuota[ns] {
-				s.NamespacesWithoutQuota++
-				findings = append(findings, model.NewFinding(
-					model.RiskYellow, "missing-resourcequota", ns, "",
-					fmt.Sprintf("el namespace %s no tiene ningún ResourceQuota", ns),
-				))
-			}
+	s.HasQuotaData = true
+	withQuota := make(map[string]bool, len(inv.ResourceQuotas))
+	for _, q := range inv.ResourceQuotas {
+		withQuota[q.Namespace] = true
+	}
+	for _, ns := range namespaces {
+		if !withQuota[ns] {
+			s.NamespacesWithoutQuota++
+			findings = append(findings, model.NewFinding(
+				model.RiskYellow, "missing-resourcequota", ns, "",
+				fmt.Sprintf("el namespace %s no tiene ningún ResourceQuota", ns),
+			))
 		}
 	}
 

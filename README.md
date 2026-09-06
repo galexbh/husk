@@ -91,6 +91,7 @@ Versión en Markdown plano (para leer directo en GitHub, sin el sitio):
 - [`docs/configuration.md`](docs/configuration.md) — esquema completo de `config.yaml`.
 - [`docs/rbac.md`](docs/rbac.md) — permisos mínimos y `husk init rbac`.
 - [`docs/metrics.md`](docs/metrics.md) — catálogo de queries PromQL de sizing/capacity.
+- [`docs/agentes-ia.md`](docs/agentes-ia.md) — cómo un agente de IA puede correr `husk` e interpretar su salida.
 
 ## Desarrollo
 

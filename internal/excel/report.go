@@ -65,12 +65,12 @@ func findingsSheet(findings []model.Finding) Sheet {
 	rows := make([][]string, 0, len(findings))
 	risks := make([]model.RiskLevel, 0, len(findings))
 	for _, f := range findings {
-		rows = append(rows, []string{string(f.Severity), f.Category, f.Namespace, f.Resource, f.Message})
+		rows = append(rows, []string{string(f.Severity), f.Category, f.Namespace, f.Resource, f.Message, f.Explanation})
 		risks = append(risks, f.Severity)
 	}
 	return Sheet{
 		Name:     "Findings",
-		Headers:  []string{"Severidad", "Categoría", "Namespace", "Recurso", "Mensaje"},
+		Headers:  []string{"Severidad", "Categoría", "Namespace", "Recurso", "Mensaje", "Explicación"},
 		Rows:     rows,
 		RowRisks: risks,
 	}

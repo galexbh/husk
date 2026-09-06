@@ -12,11 +12,12 @@ husk inventory summary [flags]
 
 Genera el inventario completo: Deployments, StatefulSets, DaemonSets,
 Services, PVCs, ConfigMaps, Secrets (solo nombres y metadatos — **nunca**
-contenido), Nodes, StorageClasses y CustomResourceDefinitions.
+contenido), Nodes, StorageClasses, ResourceQuotas y
+CustomResourceDefinitions.
 
 | Flag | Descripción |
 |---|---|
-| `--extended` | Incluye además RBAC (Roles/RoleBindings/ClusterRoles/ClusterRoleBindings), NetworkPolicies, PodDisruptionBudgets, ResourceQuotas, LimitRanges, HorizontalPodAutoscalers e Ingresses/Routes. |
+| `--extended` | Incluye además RBAC (Roles/RoleBindings/ClusterRoles/ClusterRoleBindings), NetworkPolicies, PodDisruptionBudgets, LimitRanges, HorizontalPodAutoscalers e Ingresses/Routes. ResourceQuotas ya se incluye siempre, sin necesitar este flag. |
 
 Soporta los cuatro formatos: `table`, `markdown`, `json` y `excel`.
 
@@ -41,8 +42,7 @@ valores ni los nombres de las claves.
 
 La versión ejecutiva: conteos agregados por tipo de recurso y hallazgos de
 riesgo (workloads con una sola réplica, sin `resources.limits`, namespaces
-sin `ResourceQuota` — este último hallazgo solo se calcula con
-`--extended`, porque necesita la lista de ResourceQuotas).
+sin `ResourceQuota` — se recolecta siempre, sin necesitar `--extended`).
 
 ```sh
 husk inventory summary --extended

@@ -186,7 +186,6 @@ type ExtendedInventory struct {
 	ClusterRoleBindings  []RBACSummary          `json:"clusterRoleBindings,omitempty"`
 	NetworkPolicies      []NetworkPolicySummary `json:"networkPolicies,omitempty"`
 	PodDisruptionBudgets []PDBSummary           `json:"podDisruptionBudgets,omitempty"`
-	ResourceQuotas       []ResourceQuotaSummary `json:"resourceQuotas,omitempty"`
 	LimitRanges          []LimitRangeSummary    `json:"limitRanges,omitempty"`
 	HPAs                 []HPASummary           `json:"hpas,omitempty"`
 	Ingresses            []IngressSummary       `json:"ingresses,omitempty"`
@@ -206,6 +205,10 @@ type Inventory struct {
 	Nodes          []NodeSummary         `json:"nodes"`
 	StorageClasses []StorageClassSummary `json:"storageClasses"`
 	CRDs           []CRDSummary          `json:"crds"`
+	// ResourceQuotas se recolecta siempre (no depende de --extended): es un
+	// único tipo de recurso, barato de listar, y alimenta el hallazgo de
+	// namespaces sin ResourceQuota en `inventory summary`.
+	ResourceQuotas []ResourceQuotaSummary `json:"resourceQuotas,omitempty"`
 
 	Extended *ExtendedInventory `json:"extended,omitempty"`
 }
@@ -229,9 +232,11 @@ type InventorySummary struct {
 	SingleReplicaWorkloads int `json:"singleReplicaWorkloads"`
 	WorkloadsWithoutLimits int `json:"workloadsWithoutLimits"`
 
-	// NamespacesWithoutQuota solo se calcula cuando el inventario incluyó
-	// --extended (necesita ResourceQuotas); HasQuotaData indica si el
-	// campo anterior es significativo.
+	// NamespacesWithoutQuota se calcula siempre (ResourceQuotas ya no
+	// depende de --extended). HasQuotaData queda en false solo al leer un
+	// InventorySummary histórico (~/.husk/history/) generado por una
+	// versión de husk anterior a este cambio, donde el dato legítimamente
+	// no existía.
 	NamespacesWithoutQuota int  `json:"namespacesWithoutQuota,omitempty"`
 	HasQuotaData           bool `json:"hasQuotaData"`
 

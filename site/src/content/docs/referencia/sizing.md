@@ -28,8 +28,10 @@ No soporta `--output excel` en esta fase.
 ## Veredictos
 
 `sin-datos`, `sin-limites`, `sobreaprovisionado`, `subaprovisionado`,
-`saludable` — ver el detalle de cada condición y las queries PromQL exactas
-en [Métricas PromQL](/husk/guias/metricas/).
+`saludable`, `sidecar-ignorado` (contenedor identificado como sidecar por
+`sizing.sidecar_container_names`, excluido del veredicto) — ver el detalle
+de cada condición y las queries PromQL exactas en
+[Métricas PromQL](/husk/guias/metricas/).
 
 ## Ejemplo
 
@@ -69,4 +71,5 @@ spec:
 
 `sizing.cpu_percentile`, `sizing.memory_percentile`, `sizing.lookback`,
 `sizing.cpu_limit_multiplier`, `sizing.memory_buffer_percent`,
-`sizing.over_provision_factor` — ver [Configuración](/husk/guias/configuracion/).
+`sizing.over_provision_factor`, `sizing.sidecar_container_names` — ver
+[Configuración](/husk/guias/configuracion/).

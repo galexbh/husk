@@ -32,6 +32,12 @@ type SizingConfig struct {
 	// OverProvisionFactor: si el request declarado de un contenedor supera
 	// a su consumo observado por este factor, se marca "sobreaprovisionado".
 	OverProvisionFactor float64 `yaml:"over_provision_factor" mapstructure:"over_provision_factor"`
+	// SidecarContainerNames: fragmentos de nombre (comparación
+	// case-insensitive, substring) que identifican contenedores sidecar
+	// conocidos (service mesh, agentes de observabilidad/APM); esos
+	// contenedores se marcan "sidecar-ignorado" en vez de aplicarles el
+	// veredicto de sizing de la aplicación.
+	SidecarContainerNames []string `yaml:"sidecar_container_names" mapstructure:"sidecar_container_names"`
 }
 
 // CapacityConfig controla los umbrales y ventana histórica del análisis de

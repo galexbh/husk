@@ -31,12 +31,14 @@ réplica hasta un namespace sin backup — se modela como un `Finding`:
 
 ```go
 type Finding struct {
-	ID        string    // determinista: category + namespace + resource
-	Severity  RiskLevel // red | yellow | green | ""
-	Category  string
-	Message   string
-	Namespace string
-	Resource  string
+	ID             string    // determinista: category + namespace + resource
+	Severity       RiskLevel // red | yellow | green | ""
+	Category       string
+	Message        string
+	Namespace      string
+	Resource       string
+	Explanation    string // qué significa el hallazgo y por qué importa
+	Recommendation string // acción concreta sugerida
 }
 ```
 
@@ -47,6 +49,14 @@ que:
 - `husk score` enlace cada punto restado a un hallazgo concreto.
 - `husk report diff` reconozca "el mismo" hallazgo entre dos snapshots,
   aunque el orden interno de la lista cambie entre ejecuciones.
+
+`Explanation` y `Recommendation` vienen de un catálogo único
+(`internal/model/finding_catalog.go`), indexado por `Category`, y se
+adjuntan a todo `Finding` en el momento en que se construye — no solo en
+`report generate`. El objetivo es que cualquier `--output json` de
+cualquier comando (`score`, `dr assess`, `sizing report`, `capacity nodes`,
+`inventory summary`) sea interpretable sin contexto adicional, incluido por
+un agente de IA. Ver [Guía para agentes de IA](/husk/guias/agentes-ia/).
 
 ## Garantías de solo lectura
 

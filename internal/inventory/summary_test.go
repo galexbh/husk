@@ -34,19 +34,20 @@ func TestBuildSummary_CountsAndFindings(t *testing.T) {
 	if s.WorkloadsWithoutLimits != 1 {
 		t.Errorf("WorkloadsWithoutLimits = %d, want 1", s.WorkloadsWithoutLimits)
 	}
-	if s.HasQuotaData {
-		t.Error("HasQuotaData debería ser false sin inv.Extended")
+	if !s.HasQuotaData {
+		t.Error("HasQuotaData debería ser true: ResourceQuotas ya no depende de --extended")
 	}
-	if len(s.Findings) != 2 {
-		t.Errorf("len(Findings) = %d, want 2", len(s.Findings))
+	if s.NamespacesWithoutQuota != 1 {
+		t.Errorf("NamespacesWithoutQuota = %d, want 1 (shop sin ResourceQuota)", s.NamespacesWithoutQuota)
+	}
+	if len(s.Findings) != 3 {
+		t.Errorf("len(Findings) = %d, want 3 (single-replica + missing-limits + missing-resourcequota)", len(s.Findings))
 	}
 }
 
 func TestBuildSummary_NamespacesWithoutQuota(t *testing.T) {
 	inv := &model.Inventory{
-		Extended: &model.ExtendedInventory{
-			ResourceQuotas: []model.ResourceQuotaSummary{{Name: "default", Namespace: "shop"}},
-		},
+		ResourceQuotas: []model.ResourceQuotaSummary{{Name: "default", Namespace: "shop"}},
 	}
 
 	s := BuildSummary(inv, []string{"shop", "billing"})

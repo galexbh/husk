@@ -170,7 +170,7 @@ func (a *Analyzer) buildNodeCapacity(ctx context.Context, n corev1.Node, reqCPU,
 		a.enrichWithMetrics(ctx, &nc)
 	}
 
-	nc.Risk = nodeRisk(ready, n.Spec.Unschedulable, cpuHeadroom, memHeadroom, a.headroomThresholdPercent)
+	nc.Risk, nc.RiskAxes = nodeRisk(ready, n.Spec.Unschedulable, cpuHeadroom, memHeadroom, a.headroomThresholdPercent)
 	return nc
 }
 

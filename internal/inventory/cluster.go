@@ -149,9 +149,32 @@ func nodeSummaryFrom(n corev1.Node) model.NodeSummary {
 	}
 }
 
+// collectResourceQuotas recolecta ResourceQuotas por namespace. A diferencia
+// del resto de --extended, esto se recolecta siempre: es un único tipo de
+// recurso, barato de listar, que alimenta el hallazgo "namespaces sin
+// ResourceQuota" de `inventory summary` sin necesitar el resto del detalle
+// extendido (RBAC, NetworkPolicies, PDBs, LimitRanges, HPAs, Ingresses/Routes).
+func (c *Collector) collectResourceQuotas(ctx context.Context, inv *model.Inventory, namespaces []string) error {
+	for _, ns := range namespaces {
+		quotas, err := c.client.Kubernetes.CoreV1().ResourceQuotas(ns).List(ctx, listOpts)
+		if err != nil {
+			return huskerr.New("no se pudo listar ResourceQuotas en "+ns, "verifica el permiso de lectura sobre resourcequotas", err)
+		}
+		for _, q := range quotas.Items {
+			inv.ResourceQuotas = append(inv.ResourceQuotas, model.ResourceQuotaSummary{
+				Name:      q.Name,
+				Namespace: q.Namespace,
+				Hard:      resourceListToStrings(q.Status.Hard),
+				Used:      resourceListToStrings(q.Status.Used),
+			})
+		}
+	}
+	return nil
+}
+
 // collectExtended recolecta los recursos que solo se piden con --extended y
-// no encajan en las demás categorías: PodDisruptionBudgets, ResourceQuotas,
-// LimitRanges, HorizontalPodAutoscalers y RBAC (delegado a collectRBAC).
+// no encajan en las demás categorías: PodDisruptionBudgets, LimitRanges,
+// HorizontalPodAutoscalers y RBAC (delegado a collectRBAC).
 func (c *Collector) collectExtended(ctx context.Context, ext *model.ExtendedInventory, namespaces []string) error {
 	for _, ns := range namespaces {
 		pdbs, err := c.client.Kubernetes.PolicyV1().PodDisruptionBudgets(ns).List(ctx, listOpts)
@@ -173,19 +196,6 @@ func (c *Collector) collectExtended(ctx context.Context, ext *model.ExtendedInve
 				MaxUnavailable: maxUnavail,
 				CurrentHealthy: pdb.Status.CurrentHealthy,
 				DesiredHealthy: pdb.Status.DesiredHealthy,
-			})
-		}
-
-		quotas, err := c.client.Kubernetes.CoreV1().ResourceQuotas(ns).List(ctx, listOpts)
-		if err != nil {
-			return huskerr.New("no se pudo listar ResourceQuotas en "+ns, "verifica el permiso de lectura sobre resourcequotas", err)
-		}
-		for _, q := range quotas.Items {
-			ext.ResourceQuotas = append(ext.ResourceQuotas, model.ResourceQuotaSummary{
-				Name:      q.Name,
-				Namespace: q.Namespace,
-				Hard:      resourceListToStrings(q.Status.Hard),
-				Used:      resourceListToStrings(q.Status.Used),
 			})
 		}
 

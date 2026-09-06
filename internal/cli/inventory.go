@@ -26,7 +26,7 @@ func newInventoryCommand() *cobra.Command {
 			return runInventory(cmd, extended)
 		},
 	}
-	cmd.Flags().BoolVar(&extended, "extended", false, "incluye RBAC, NetworkPolicies, PDBs, ResourceQuotas, LimitRanges, HPAs, Ingresses/Routes")
+	cmd.Flags().BoolVar(&extended, "extended", false, "incluye RBAC, NetworkPolicies, PDBs, LimitRanges, HPAs, Ingresses/Routes (ResourceQuotas ya se incluyen siempre, sin necesidad de --extended)")
 	cmd.AddCommand(newInventorySummaryCommand())
 	return cmd
 }
@@ -41,7 +41,7 @@ func newInventorySummaryCommand() *cobra.Command {
 			return runInventorySummary(cmd, extended)
 		},
 	}
-	cmd.Flags().BoolVar(&extended, "extended", false, "incluye RBAC, NetworkPolicies, PDBs, ResourceQuotas, LimitRanges, HPAs, Ingresses/Routes (necesario para el hallazgo de namespaces sin ResourceQuota)")
+	cmd.Flags().BoolVar(&extended, "extended", false, "incluye RBAC, NetworkPolicies, PDBs, LimitRanges, HPAs, Ingresses/Routes (el hallazgo de namespaces sin ResourceQuota ya no depende de --extended)")
 	return cmd
 }
 

@@ -6,6 +6,7 @@ package report
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/jedib0t/go-pretty/v6/table"
 
@@ -195,6 +196,7 @@ func inventoryTables(inv *model.Inventory) []table.Writer {
 	add(nodesTable(inv.Nodes), len(inv.Nodes))
 	add(storageClassesTable(inv.StorageClasses), len(inv.StorageClasses))
 	add(crdsTable(inv.CRDs), len(inv.CRDs))
+	add(resourceQuotasTable(inv.ResourceQuotas), len(inv.ResourceQuotas))
 
 	if ext := inv.Extended; ext != nil {
 		add(rbacTable("Roles", ext.Roles), len(ext.Roles))
@@ -203,7 +205,6 @@ func inventoryTables(inv *model.Inventory) []table.Writer {
 		add(rbacTable("ClusterRoleBindings", ext.ClusterRoleBindings), len(ext.ClusterRoleBindings))
 		add(networkPoliciesTable(ext.NetworkPolicies), len(ext.NetworkPolicies))
 		add(pdbsTable(ext.PodDisruptionBudgets), len(ext.PodDisruptionBudgets))
-		add(resourceQuotasTable(ext.ResourceQuotas), len(ext.ResourceQuotas))
 		add(limitRangesTable(ext.LimitRanges), len(ext.LimitRanges))
 		add(hpasTable(ext.HPAs), len(ext.HPAs))
 		add(ingressesTable(ext.Ingresses), len(ext.Ingresses))
@@ -277,6 +278,8 @@ func verdictLabel(v string) string {
 		return "SALUDABLE"
 	case "sin-datos":
 		return "SIN DATOS"
+	case "sidecar-ignorado":
+		return "SIDECAR IGNORADO"
 	default:
 		return v
 	}
@@ -292,17 +295,28 @@ func orDash(s string) string {
 func capacityNodesTable(title string, list []model.NodeCapacity) table.Writer {
 	t := newSectionTable(fmt.Sprintf("%s (%d)", title, len(list)))
 	t.AppendHeader(table.Row{
-		"Nombre", "Ready", "Zona", "CPU alloc.", "CPU pedida", "Headroom CPU", "Mem alloc.", "Mem pedida", "Headroom Mem", "Pods", "Riesgo",
+		"Nombre", "Ready", "Zona", "CPU alloc.", "CPU pedida", "Headroom CPU", "Mem alloc.", "Mem pedida", "Headroom Mem", "Pods", "Riesgo", "Eje en riesgo",
 	})
 	for _, n := range list {
 		t.AppendRow(table.Row{
 			n.Name, n.Ready, n.Zone,
 			n.AllocatableCPU, n.RequestedCPU, fmt.Sprintf("%.1f%%", n.CPUHeadroomPercent),
 			n.AllocatableMemory, n.RequestedMemory, fmt.Sprintf("%.1f%%", n.MemoryHeadroomPercent),
-			n.PodCount, riskLabel(n.Risk),
+			n.PodCount, riskLabel(n.Risk), riskAxesLabel(n.RiskAxes),
 		})
 	}
 	return t
+}
+
+func riskAxesLabel(axes []string) string {
+	if len(axes) == 0 {
+		return "-"
+	}
+	upper := make([]string, len(axes))
+	for i, a := range axes {
+		upper[i] = strings.ToUpper(a)
+	}
+	return strings.Join(upper, " + ")
 }
 
 func concentrationRisksTable(list []model.ConcentrationRisk) table.Writer {

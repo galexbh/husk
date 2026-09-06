@@ -16,8 +16,13 @@ const (
 
 	drOADPNotInstalledDeduction = 40.0
 	drOADPUnhealthyDeduction    = 25.0
-	drMissingBackupDeduction    = 10.0
-	drMissingBackupCap          = 40.0
+	// drMissingBackupMaxDeduction es la deducción cuando el 100% de los
+	// namespaces de aplicación evaluados no tiene backup; escala
+	// proporcionalmente con la fracción de namespaces sin backup, en vez de
+	// un monto fijo por namespace con tope (antes: 10.0 por namespace, tope
+	// 40.0) — así el mismo hallazgo absoluto no pesa distinto según el
+	// tamaño del cluster.
+	drMissingBackupMaxDeduction = 40.0
 	drStaleBackupDeduction      = 5.0
 	drStaleBackupCap            = 20.0
 	drEtcdUnverifiableDeduction = 10.0
@@ -25,8 +30,15 @@ const (
 	drCSIUnsupportedDeduction   = 5.0
 	drCSIUnsupportedCap         = 20.0
 
-	capacitySaturatedNodeDeduction = 15.0
-	capacitySaturatedNodeCap       = 60.0
+	// capacitySaturatedMaxDeduction es la deducción cuando todos los nodos
+	// están en riesgo ALTO; escala proporcionalmente (antes: 15.0 por nodo,
+	// tope 60.0), igual criterio que drMissingBackupMaxDeduction.
+	capacitySaturatedMaxDeduction = 60.0
+	// capacityHeadroomWarningWeight pondera un nodo en riesgo MEDIO (un solo
+	// eje de headroom bajo el umbral) como la mitad de uno en riesgo ALTO
+	// (ambos ejes, o nodo no-Ready/unschedulable) al proporcionalizar la
+	// deducción de capacity.
+	capacityHeadroomWarningWeight  = 0.5
 	capacityConcentrationDeduction = 10.0
 	capacityConcentrationCap       = 40.0
 )

@@ -8,7 +8,7 @@ package model
 // vez que se agrega, renombra o quita un campo, para que `report diff` y el
 // historial local (~/.husk/history/) puedan detectar snapshots
 // incompatibles entre versiones de husk.
-const SchemaVersion = "1"
+const SchemaVersion = "2"
 
 // ClusterSnapshot es el modelo único que comparten todos los reportes de
 // husk, el historial local (~/.husk/history/) y `report diff`. Cada

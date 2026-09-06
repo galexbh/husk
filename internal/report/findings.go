@@ -55,36 +55,16 @@ func PrioritizeFindings(sources ...[]model.Finding) []model.Finding {
 	return merged
 }
 
-// recommendationActions traduce cada categoría de hallazgo conocida en una
-// acción sugerida concreta. Categorías sin entrada aquí caen al mensaje
-// genérico del propio hallazgo.
-var recommendationActions = map[string]string{
-	"single-replica":             "Aumenta replicas a 2 o más para tolerar la pérdida de un pod, o documenta por qué el workload es de instancia única.",
-	"missing-limits":             "Define resources.limits.cpu y resources.limits.memory; usa `husk sizing report --dry-run` para una recomendación basada en consumo real.",
-	"missing-resourcequota":      "Crea un ResourceQuota para el namespace, para evitar que un workload sin límites agote la capacidad del cluster.",
-	"sizing-no-limits":           "Define resources.limits; usa `husk sizing report --dry-run` para el patch sugerido.",
-	"sizing-under-provisioned":   "Aumenta requests/limits: el consumo observado supera lo declarado (riesgo de throttling/OOM). Ver `husk sizing report --dry-run`.",
-	"sizing-over-provisioned":    "Reduce requests/limits al consumo real observado para liberar headroom del cluster. Ver `husk sizing report --dry-run`.",
-	"oadp-not-installed":         "Instala y configura el operador OADP en openshift-adp para habilitar backups gestionados con Velero.",
-	"oadp-unhealthy":             "Revisa los logs del operador OADP y la DataProtectionApplication: la reconciliación está fallando.",
-	"missing-backup":             "Crea un Schedule/Backup de Velero que incluya este namespace.",
-	"stale-backup":               "Verifica que el Schedule de backup esté corriendo; el último backup completado supera la antigüedad máxima configurada.",
-	"etcd-snapshot-unverifiable": "Configura y documenta un CronJob de backup de etcd, o confirma manualmente la antigüedad del último snapshot.",
-	"etcd-snapshot-stale":        "Ejecuta un nuevo snapshot de etcd; el más reciente supera la antigüedad máxima configurada.",
-	"csi-snapshot-unsupported":   "Usa una StorageClass cuyo provisioner tenga un VolumeSnapshotClass asociado, o crea uno para el provisioner actual.",
-	"missing-pdb":                "Define un PodDisruptionBudget que cubra este workload, para protegerlo durante drenados de nodos.",
-	"missing-topology-spread":    "Agrega topologySpreadConstraints al pod template para distribuir las réplicas entre nodos/zonas.",
-	"node-saturated":             "Añade capacidad al cluster o redistribuye carga: el nodo tiene poco headroom libre.",
-	"concentration-risk":         "Agrega topologySpreadConstraints o antiafinidad para distribuir las réplicas en más nodos/zonas.",
-}
-
 // BuildRecommendations deriva una acción sugerida por cada hallazgo, en el
-// mismo orden en que aparecen (se espera una lista ya priorizada).
+// mismo orden en que aparecen (se espera una lista ya priorizada). La
+// acción viene de model.Finding.Recommendation (poblado por
+// model.NewFinding desde internal/model/finding_catalog.go): un único
+// catálogo, sin duplicar aquí el texto por categoría.
 func BuildRecommendations(findings []model.Finding) []model.Recommendation {
 	recs := make([]model.Recommendation, 0, len(findings))
 	for _, f := range findings {
-		action, ok := recommendationActions[f.Category]
-		if !ok {
+		action := f.Recommendation
+		if action == "" {
 			action = f.Message
 		}
 		recs = append(recs, model.Recommendation{

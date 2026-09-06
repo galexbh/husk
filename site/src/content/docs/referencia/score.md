@@ -34,13 +34,17 @@ tabla de salida lo marca explícitamente:
 - **Sizing**: pondera cada contenedor evaluable según su veredicto — verde
   cuenta completo, amarillo (sobreaprovisionado) parcial, rojo (sin
   límites/subaprovisionado) resta con más peso.
-- **DR**: 100 menos deducciones fijas por hallazgo (OADP no instalado o no
-  healthy, namespaces sin backup o con backup vencido, snapshot de etcd no
-  verificable o vencido, StorageClasses sin soporte CSI), cada categoría con
-  un tope máximo de deducción para que muchos hallazgos del mismo tipo no
-  lleven la dimensión a 0 de forma desproporcionada.
-- **Capacity**: 100 menos una deducción fija por cada nodo saturado
-  (headroom bajo el umbral) y por cada riesgo de concentración de carga.
+- **DR**: 100 menos una deducción fija por OADP no instalado o no healthy;
+  una deducción **proporcional** al porcentaje de namespaces de aplicación
+  sin backup (el mismo hallazgo pesa igual sin importar el tamaño del
+  cluster); deducciones fijas (con tope) por namespaces con backup vencido,
+  snapshot de etcd no verificable o vencido, y StorageClasses sin soporte
+  CSI.
+- **Capacity**: 100 menos una deducción **proporcional** al porcentaje de
+  nodos en riesgo — un nodo ALTO (headroom bajo el umbral en CPU **y**
+  memoria a la vez, o no-Ready/unschedulable) cuenta entero, uno MEDIO (un
+  solo eje bajo el umbral) cuenta la mitad — más una deducción fija (con
+  tope) por cada riesgo de concentración de carga.
 - **PDB** y **Topology spread**: proporcional — `100 × cubiertos / total`
   workloads críticos — para que el resultado no dependa del tamaño del
   cluster.
