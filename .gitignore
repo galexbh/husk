@@ -11,6 +11,9 @@
 # Config/estado local del usuario
 .husk/
 
+# Salidas de pruebas manuales corriendo husk en Docker (home/history + --output-file)
+/docker-out/
+
 # IDE / OS
 .idea/
 .vscode/
