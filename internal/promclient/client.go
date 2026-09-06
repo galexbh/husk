@@ -17,6 +17,7 @@ import (
 // no acoplar su firma pública a slog.
 type Logger interface {
 	Debug(msg string, args ...any)
+	Warn(msg string, args ...any)
 }
 
 // Client envuelve la API HTTP de Prometheus/Thanos Querier.

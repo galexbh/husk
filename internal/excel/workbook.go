@@ -96,7 +96,7 @@ func (w *Workbook) AddSheet(sheet Sheet) error {
 			if err != nil {
 				return err
 			}
-			if err := w.f.SetCellValue(name, cell, val); err != nil {
+			if err := w.f.SetCellValue(name, cell, sanitizeCellValue(val)); err != nil {
 				return err
 			}
 		}
@@ -230,6 +230,23 @@ func (w *Workbook) FinalizeSummary(title string, entries []SummaryEntry) error {
 // SaveAs escribe el workbook en path.
 func (w *Workbook) SaveAs(path string) error {
 	return w.f.SaveAs(path)
+}
+
+// sanitizeCellValue neutraliza la inyección de fórmulas (CWE-1236): los
+// valores de fila provienen de nombres/labels/hosts leídos del cluster, y
+// cualquier actor con permiso para crear un recurso controla ese texto. Si
+// empieza con un carácter que Excel/LibreOffice puede interpretar como
+// inicio de fórmula, se antepone un apóstrofe para forzarlo a texto literal.
+func sanitizeCellValue(val string) string {
+	if val == "" {
+		return val
+	}
+	switch val[0] {
+	case '=', '+', '-', '@', '\t', '\r':
+		return "'" + val
+	default:
+		return val
+	}
 }
 
 func mustCellName(col, row int) string {

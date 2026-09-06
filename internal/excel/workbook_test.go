@@ -87,6 +87,71 @@ func TestWorkbook_AddSheetAndSummary_ProducesValidXLSX(t *testing.T) {
 	}
 }
 
+func TestWorkbook_AddSheet_SanitizesFormulaTriggerCharacters(t *testing.T) {
+	wb, err := New(1, false)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	sheet := Sheet{
+		Name:    "ConfigMaps",
+		Headers: []string{"Namespace", "Nombre"},
+		Rows: [][]string{
+			{"shop", "=cmd|'/c calc'!A0"},
+			{"shop", "+HYPERLINK(\"http://evil\")"},
+			{"shop", "-1+1"},
+			{"shop", "@SUM(A1)"},
+			{"shop", "normal-name"},
+		},
+	}
+	if err := wb.AddSheet(sheet); err != nil {
+		t.Fatalf("AddSheet: %v", err)
+	}
+
+	path := filepath.Join(t.TempDir(), "formulas.xlsx")
+	if err := wb.SaveAs(path); err != nil {
+		t.Fatalf("SaveAs: %v", err)
+	}
+
+	f, err := excelize.OpenFile(path)
+	if err != nil {
+		t.Fatalf("OpenFile: %v", err)
+	}
+	defer f.Close()
+
+	// El valor original queda intacto salvo por el apóstrofe de escape
+	// anteponiéndolo — igual que Excel al marcar manualmente una celda
+	// como texto. Es un cambio visible pero necesario: sobrevive a
+	// copiar/pegar la celda o reexportar el reporte como CSV, a
+	// diferencia de un estilo de formato de solo metadata.
+	cases := map[string]string{
+		"B2": "'=cmd|'/c calc'!A0",
+		"B3": "'+HYPERLINK(\"http://evil\")",
+		"B4": "'-1+1",
+		"B5": "'@SUM(A1)",
+	}
+	for cell, want := range cases {
+		got, err := f.GetCellValue("ConfigMaps", cell)
+		if err != nil {
+			t.Fatalf("GetCellValue(%s): %v", cell, err)
+		}
+		if got != want {
+			t.Errorf("ConfigMaps!%s = %q, want %q (debe quedar neutralizado con un apóstrofe inicial)", cell, got, want)
+		}
+		formula, err := f.GetCellFormula("ConfigMaps", cell)
+		if err != nil {
+			t.Fatalf("GetCellFormula(%s): %v", cell, err)
+		}
+		if formula != "" {
+			t.Errorf("ConfigMaps!%s quedó como fórmula (%q); debe guardarse como texto literal", cell, formula)
+		}
+	}
+
+	if got, _ := f.GetCellValue("ConfigMaps", "B6"); got != "normal-name" {
+		t.Errorf("ConfigMaps!B6 = %q, want normal-name (no debe alterarse un valor sin carácter disparador)", got)
+	}
+}
+
 func TestWorkbook_SkipsEmptySheets(t *testing.T) {
 	wb, err := New(1, false)
 	if err != nil {

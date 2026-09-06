@@ -22,8 +22,9 @@ const (
 // DiscoverTransport intenta resolver la CA del router de OpenShift para
 // validar TLS correctamente contra la route de Thanos Querier. Si no puede
 // (ConfigMap ausente, sin permiso de lectura, cluster con una CA distinta),
-// degrada a InsecureSkipVerify y lo deja registrado en el logger de debug —
-// nunca falla por esto, para no bloquear el sizing por un detalle de TLS.
+// degrada a InsecureSkipVerify y lo advierte con nivel Warn (visible sin
+// --verbose) — nunca falla por esto, para no bloquear el sizing por un
+// detalle de TLS.
 func DiscoverTransport(ctx context.Context, kube kubernetes.Interface, logger Logger) http.RoundTripper {
 	tlsConfig := &tls.Config{}
 
@@ -42,7 +43,7 @@ func DiscoverTransport(ctx context.Context, kube kubernetes.Interface, logger Lo
 		}
 	}
 
-	logger.Debug("no se pudo resolver la CA del router de OpenShift; se usará InsecureSkipVerify para Thanos Querier", "error", err)
+	logger.Warn("no se pudo resolver la CA del router de OpenShift; se usará InsecureSkipVerify para Thanos Querier — el bearer token viajará sin validar el certificado del servidor", "error", err)
 	tlsConfig.InsecureSkipVerify = true //nolint:gosec // fallback documentado cuando no se puede resolver la CA real del router
 	return &http.Transport{TLSClientConfig: tlsConfig}
 }

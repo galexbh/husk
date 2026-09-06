@@ -95,6 +95,18 @@ tener un kubeconfig válido (típicamente vía `oc login`), pero el binario
   `thanos-querier`/`alertmanager-main` en `openshift-monitoring`
   (`internal/k8sclient/thanos.go`) y autentica con el mismo bearer token del
   usuario (`internal/promclient`, `internal/alertmanager`).
+- **TLS hacia Thanos/Alertmanager:** `promclient.DiscoverTransport`
+  (`internal/promclient/discovery.go`) es el único punto que arma el
+  transporte HTTP para estas rutas — intenta validar contra la CA real del
+  router de OpenShift (ConfigMap
+  `openshift-config-managed/default-ingress-cert`) y solo degrada a
+  `InsecureSkipVerify` si no puede resolverla, advirtiéndolo con `Warn`
+  (visible sin `--verbose`), nunca en silencio. **Todo código que hable con
+  Thanos/Alertmanager con el bearer token del usuario debe reusar esta
+  función** — no armar un `http.Transport` ad-hoc con `InsecureSkipVerify`
+  hardcodeado (ya pasó una vez en `husk connect health`, que tenía su propio
+  transporte inseguro incondicional; corregido para reusar
+  `DiscoverTransport` igual que `sizing`/`alertmanager`/`prom`).
 - Si el kubeconfig no tiene credenciales válidas, el error indica
   claramente que hace falta `oc login`/`kubectl` (`internal/huskerr`).
 
@@ -270,6 +282,15 @@ la corrección fue moverlos aquí.
   contenido de Secrets o ConfigMaps. `model.SecretSummary`/`ConfigMapSummary`
   solo tienen nombre, namespace, tipo, cantidad de claves y labels — no
   existe ningún campo capaz de portar `Data`/`BinaryData`.
+- **Inyección de fórmulas en Excel (CWE-1236):** los valores de fila en los
+  reportes `.xlsx` vienen de nombres/labels/hosts leídos en vivo del
+  cluster — texto que cualquier actor con permiso para crear un recurso en
+  un namespace de aplicación controla. `excel.Workbook.AddSheet`
+  (`internal/excel/workbook.go`) es el único punto que escribe celdas de
+  datos y sanea cada valor con `sanitizeCellValue` (antepone `'` si empieza
+  con `= + - @` o tab/CR) antes de `SetCellValue`. Cualquier renderer nuevo
+  que escriba celdas debe pasar por `Workbook.AddSheet`, no llamar a
+  `excelize` directamente para volcar datos de fila.
 - **Lint:** el repo debe pasar `golangci-lint run ./...` con 0 issues (ver
   `.golangci.yml`). Al fijar la versión del binario/action en CI, verifica
   que sea igual o más nueva que la versión de Go declarada en `go.mod` — un

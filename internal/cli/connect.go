@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/galexbh/husk/internal/huskerr"
 	"github.com/galexbh/husk/internal/k8sclient"
+	"github.com/galexbh/husk/internal/promclient"
 )
 
 func newConnectCommand() *cobra.Command {
@@ -87,9 +87,7 @@ func runConnectHealth(cmd *cobra.Command, _ []string) error {
 // de Thanos Querier. Este es un probe simple; el cliente completo de
 // Prometheus (descubrimiento, manejo de TLS, queries tipadas) se construye
 // en la Fase 2 (internal/promclient).
-func reportThanosHealth(ctx context.Context, out io.Writer, client *k8sclient.Client, logger interface {
-	Debug(msg string, args ...any)
-}) {
+func reportThanosHealth(ctx context.Context, out io.Writer, client *k8sclient.Client, logger promclient.Logger) {
 	if !client.IsOpenShift {
 		fmt.Fprintln(out, "[N/A]    Thanos Querier: no aplica (cluster no es OpenShift)")
 		return
@@ -109,10 +107,11 @@ func reportThanosHealth(ctx context.Context, out io.Writer, client *k8sclient.Cl
 
 	httpClient := &http.Client{
 		Timeout: 5 * time.Second,
-		// La route de Thanos no comparte CA con el API server; el cliente
-		// completo de Prometheus (Fase 2) resolverá la validación de TLS
-		// correctamente. Este probe mínimo solo confirma alcance y auth.
-		Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}, //nolint:gosec
+		// Misma resolución de CA que usa el cliente completo de Prometheus
+		// (internal/promclient): intenta validar contra la CA real del
+		// router de OpenShift y solo degrada a InsecureSkipVerify si no
+		// puede resolverla, dejándolo advertido en el log.
+		Transport: promclient.DiscoverTransport(ctx, client.Kubernetes, logger),
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url+"/-/healthy", nil)
