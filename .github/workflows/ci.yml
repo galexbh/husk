@@ -26,6 +26,10 @@ jobs:
         run: go test ./... -race -cover
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v9
         with:
-          version: latest
+          # "latest" puede resolver a un binario v1.x construido con una
+          # versión de Go más vieja que la de go.mod (go 1.26), y
+          # golangci-lint se niega a correr en ese caso. Se fija una
+          # versión v2 explícita, consistente con lo usado localmente.
+          version: v2.13.2
