@@ -54,7 +54,9 @@ dockers_v2:
     dockerfile: Dockerfile.release
     images:
       - ghcr.io/galexbh/husk
-      - docker.io/galexbh/husk
+      # docker.io/galexbh/husk: pendiente de reactivar cuando existan los
+      # secrets DOCKERHUB_USERNAME/DOCKERHUB_TOKEN en el repo (no configurados
+      # aún al momento del primer release, v0.1.0).
     tags:
       - "{{ .Version }}"
       - "{{ .Major }}.{{ .Minor }}"

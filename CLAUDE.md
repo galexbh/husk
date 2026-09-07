@@ -17,8 +17,11 @@ convenciones a seguir; no hace falta re-planificar desde cero.
 - Nombre del binario: `husk` (en minúsculas). Módulo Go:
   `github.com/galexbh/husk`.
 - Repositorio: `github.com/galexbh/husk`, público. Licencia: Apache-2.0.
-- Imágenes de contenedor: `ghcr.io/galexbh/husk` y `docker.io/galexbh/husk`
-  (multi-arquitectura, `linux/amd64`/`linux/arm64`).
+- Imágenes de contenedor: `ghcr.io/galexbh/husk` (multi-arquitectura,
+  `linux/amd64`/`linux/arm64`). `docker.io/galexbh/husk` está planeado pero
+  deshabilitado en `.goreleaser.yaml`/`release.yml` desde el primer release
+  (v0.1.0) hasta que existan los secrets `DOCKERHUB_USERNAME`/
+  `DOCKERHUB_TOKEN` en el repo.
 - Documentación de usuario (Starlight): `site/` — desplegada en
   **https://galexbh.github.io/husk/** vía
   `.github/workflows/docs.yml` en cada push a `main` que toque `site/**`.
