@@ -2,8 +2,12 @@
 #
 # Usado únicamente por GoReleaser (dockers_v2) en release: el binario ya
 # viene compilado por el paso `builds`, así que aquí solo se empaqueta.
+# dockers_v2 arma el build context con buildx y coloca cada binario bajo
+# "$TARGETPLATFORM/<binario>" (no en la raíz del contexto) — ver
+# https://goreleaser.com/customization/dockers_v2/.
 FROM gcr.io/distroless/static:nonroot
-COPY husk /usr/local/bin/husk
+ARG TARGETPLATFORM
+COPY $TARGETPLATFORM/husk /usr/local/bin/husk
 
 USER 65532:65532
 WORKDIR /home/nonroot
